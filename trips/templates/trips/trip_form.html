@@ -1,0 +1,210 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>{% if form.instance.pk %}Редактирование рейса{% else %}Добавить рейс{% endif %}</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+
+    <!-- Шрифт Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            padding: 40px;
+            background-color: #f8f9fa;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .form-section {
+            background-color: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+        }
+
+        h1 {
+            color: #0d6efd;
+            margin-bottom: 30px;
+            font-weight: 700;
+        }
+
+        label {
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+
+        input, textarea, select {
+            font-size: 15px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #ced4da;
+            width: 100%;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="form-section">
+        <h1 class="fw-bold">{% if form.instance.pk %}Редактирование рейса{% else %}Добавить рейс{% endif %}</h1>
+        <form method="post" autocomplete="off">
+            {% csrf_token %}
+            <div class="row g-3">
+                {% for field in form.visible_fields %}
+                    {% if field.name != 'comments' %}
+                        <div class="col-md-6">
+                            <label class="form-label">{{ field.label }}</label>
+                            {{ field }}
+
+                            {% if field.name == 'date' %}
+                                <div class="mt-2">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" onclick="setDateOffset(-1)">Вчера</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" onclick="setDateOffset(0)">Сегодня</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setDateOffset(1)">Завтра</button>
+                                </div>
+                            {% endif %}
+
+                            {% if field.errors %}
+                                <div class="text-danger small">{{ field.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+
+                {% if form.fields.comments %}
+                    <div class="col-12">
+                        <label class="form-label">{{ form.fields.comments.label }}</label>
+                        {{ form.comments }}
+                        {% if form.comments.errors %}
+                            <div class="text-danger small">{{ form.comments.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">Сохранить</button>
+                <a href="{% url 'trip_list' %}" class="btn btn-outline-secondary ms-2">Назад к списку</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Datalists -->
+<datalist id="drivers-list">
+    {% for driver in drivers %}
+        <option value="{{ driver.full_name }}"></option>
+    {% endfor %}
+</datalist>
+
+<datalist id="customers-list">
+    {% for customer in customers %}
+        <option value="{{ customer.name }}"></option>
+    {% endfor %}
+</datalist>
+
+<datalist id="trucks-list">
+    {% for truck in trucks %}
+        <option value="{{ truck.number }}"></option>
+    {% endfor %}
+</datalist>
+
+<datalist id="directions-list">
+    {% for direction in directions %}
+        <option value="{{ direction }}"></option>
+    {% endfor %}
+</datalist>
+
+<!-- Скрипты -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/i18n/jquery-ui-i18n.min.js"></script>
+
+<script>
+    function updatePrice() {
+        const customer = $('#id_customer').val();
+        const direction = $('#id_direction').val();
+        const distance = $('#id_distance').val();
+        const points = $('#id_points').val();
+        const pallets = $('#id_pallets').val();
+        const tonnage = $('#id_tonnage').val();
+
+        if (customer && direction) {
+            $.get("{% url 'get_price_by_tariff' %}", {
+                customer: customer,
+                direction: direction,
+                distance: distance,
+                points: points,
+                pallets: pallets,
+                tonnage: tonnage
+            }, function(data) {
+                if (data.price !== "") {
+                    $('#id_price').val(data.price);
+                }
+            });
+        }
+    }
+
+    $('#id_customer, #id_direction, #id_distance, #id_points, #id_pallets, #id_tonnage').on('change input', updatePrice);
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const dateInput = document.getElementById("id_date");
+
+        dateInput.addEventListener("input", function () {
+            let val = dateInput.value.replace(/\D/g, "");
+            if (val.length >= 2) val = val.slice(0, 2) + '.' + val.slice(2);
+            if (val.length >= 5) val = val.slice(0, 5) + '.' + '2025';
+            dateInput.value = val;
+        });
+    });
+</script>
+
+<script>
+function autoSelectFirstMatch(inputId, datalistId) {
+    const input = document.getElementById(inputId);
+    const datalist = document.getElementById(datalistId);
+
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && input.value) {
+            const options = datalist.querySelectorAll('option');
+            for (let option of options) {
+                if (option.value.toLowerCase().includes(input.value.toLowerCase())) {
+                    input.value = option.value;
+                    break;
+                }
+            }
+        }
+    });
+}
+
+autoSelectFirstMatch('id_driver_name', 'drivers-list');
+autoSelectFirstMatch('id_truck_number', 'trucks-list');
+autoSelectFirstMatch('id_customer', 'customers-list');
+autoSelectFirstMatch('id_direction', 'directions-list');
+</script>
+
+<script>
+function setDateOffset(offset) {
+    const input = document.getElementById("id_date");
+    const today = new Date();
+    today.setDate(today.getDate() + offset);
+    const dd = String(today.getDate()).padStart(2, '0');
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const yyyy = today.getFullYear();
+    input.value = `${dd}.${mm}.${yyyy}`;
+}
+</script>
+</body>
+</html>
