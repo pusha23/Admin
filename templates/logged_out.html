@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Выход</title>
+    <script>
+        // Удалить CSRF токен и перенаправить
+        document.cookie = "csrftoken=; Max-Age=0; path=/;";
+        window.location.replace("/login/");
+    </script>
+</head>
+<body>
+    <p>Вы вышли. Перенаправление...</p>
+</body>
+</html>
